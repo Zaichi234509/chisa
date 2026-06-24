@@ -11,9 +11,13 @@ A character showcase page for Chisa from Wuthering Waves, featuring an immersive
 - Interactive gallery with modal
 - Character information and resonance bonds sections
 
+## Live View
+
+View the live site at: https://zaichi234509.github.io/chisa/
+
 ## Usage
 
-Open `deepseek_html_20260624_fe2a24.html` in a web browser to view the page.
+Open `chisa.html` in a web browser to view the page locally.
 
 ## Credits
 
