@@ -89,16 +89,21 @@
             .float-leaf {
                 animation: floatLeaf 4s ease-in-out infinite;
             }
-            @keyframes floatLeaf {
-                0%,100%{ transform: translateY(0) rotate(0deg); opacity:0.7; }
-                50%{ transform: translateY(-15px) rotate(5deg); opacity:1; }
-            }
-            /* Modal animation */
-            .modal-enter { transition: opacity 0.3s ease, transform 0.3s ease; }
-            .modal-hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
-            .modal-visible { opacity: 1; transform: scale(1); pointer-events: auto; }
         }
-        html { scroll-behavior: smooth; }
+        @keyframes floatLeaf {
+            0%,100%{ transform: translateY(0) rotate(0deg); opacity:0.7; }
+            50%{ transform: translateY(-15px) rotate(5deg); opacity:1; }
+        }
+        /* Modal state rules live OUTSIDE the motion media query: if the closing
+           rule depended on prefers-reduced-motion, the modal could never hide. */
+        .modal-enter { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .modal-hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
+        .modal-visible { opacity: 1; pointer-events: auto; transform: scale(1); }
+        body.modal-open { overflow: hidden; }
+        /* Fallback hide: `hidden` removes the modal from layout/hit-testing even
+           if the stylesheet is still loading, blocked, or on reduced-motion.
+           While it is open, the hidden attribute is removed and .modal-visible wins. */
+        #gameplayModal[hidden] { display: none !important; }
         #particle-canvas { position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
     </style>
 </head>
@@ -129,9 +134,9 @@
                 <span class="font-playfair text-xl text-lavender tracking-widest">CHISA</span>
             </div>
             <div class="hidden md:flex gap-8 text-sm font-semibold">
-                <a href="#about" class="hover:text-havoc transition-colors duration-200">About</a>
-                <a href="#bonds" class="hover:text-havoc transition-colors duration-200">Resonance Bonds</a>
-                <a href="#gallery" class="hover:text-havoc transition-colors duration-200">Gallery</a>
+                <a href="#about" data-scroll-link class="hover:text-havoc transition-colors duration-200">About</a>
+                <a href="#bonds" data-scroll-link class="hover:text-havoc transition-colors duration-200">Resonance Bonds</a>
+                <a href="#gallery" data-scroll-link class="hover:text-havoc transition-colors duration-200">Gallery</a>
                 <a href="#join" class="px-4 py-2 bg-havoc/90 text-void rounded-full hover:bg-gold transition-all duration-200 font-bold">Join the Academy</a>
             </div>
             <button class="md:hidden text-2xl text-ice" aria-label="Open menu"><i class="ph ph-list"></i></button>
@@ -342,7 +347,7 @@
                 The academy doors are open. Will you help Chisa sever the deadlock and protect the bonds that matter?
             </p>
             <div class="flex flex-wrap gap-6 justify-center">
-                <a href="#" class="px-10 py-4 bg-havoc text-void font-bold text-lg rounded-full shadow-havoc hover:bg-gold transition-all duration-200 transform hover:scale-105">
+                <a href="https://wutheringwaves.kurogames.com/en/" target="_blank" rel="noopener noreferrer" class="px-10 py-4 bg-havoc text-void font-bold text-lg rounded-full shadow-havoc hover:bg-gold transition-all duration-200 transform hover:scale-105">
                     <i class="ph ph-sword mr-2"></i>Play Now
                 </a>
                 <button onclick="openModal()" class="px-10 py-4 border-2 border-havoc text-havoc font-bold text-lg rounded-full hover:bg-havoc/10 transition-all duration-200">
@@ -365,11 +370,24 @@
     </footer>
 
     <!-- Gameplay Modal -->
-    <div id="gameplayModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-enter modal-hidden">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div id="gameplayModal" hidden class="fixed inset-0 z-[9999] flex items-center justify-center modal-enter modal-hidden"
+         role="dialog" aria-modal="true" aria-label="Chisa gameplay video">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" data-close-modal></div>
         <div class="relative w-full max-w-4xl mx-4 aspect-video bg-void rounded-2xl overflow-hidden border border-havoc/30 shadow-havoc z-10">
-            <button onclick="closeModal()" class="absolute top-4 right-4 z-20 bg-void/80 text-havoc hover:text-gold rounded-full p-2 transition-colors"><i class="ph ph-x text-2xl"></i></button>
-            <iframe id="gameplayIframe" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="absolute inset-0 w-full h-full"></iframe>
+            <!-- z-30 > iframe: a loading/blocked iframe used to sit over this button,
+                 so clicking the X did nothing. -->
+            <button type="button" data-close-modal aria-label="Close video"
+                    class="absolute top-4 right-4 z-30 bg-void/80 text-havoc hover:text-gold hover:bg-void rounded-full p-2.5 transition-colors cursor-pointer">
+                <i class="ph ph-x text-2xl"></i>
+            </button>
+            <iframe id="gameplayIframe" src="" title="Chisa gameplay video" frameborder="0"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
+                    class="absolute inset-0 w-full h-full"></iframe>
+            <!-- Shown only if the YouTube embed is blocked (network / ad-blocker) -->
+            <p id="videoFallback" class="hidden absolute inset-x-0 bottom-0 z-20 bg-void/90 text-ice/80 text-sm p-3 text-center border-t border-havoc/30">
+                Video not loading? <a href="https://www.youtube.com/watch?v=EqqITg7kaEE" target="_blank" rel="noopener noreferrer" class="text-gold underline">Watch it on YouTube</a>.
+            </p>
         </div>
     </div>
 
@@ -442,12 +460,14 @@
                 animationId = requestAnimationFrame(draw);
             }
 
-            const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            const mediaQuery = (typeof window.matchMedia === 'function')
+                ? window.matchMedia('(prefers-reduced-motion: reduce)')
+                : { matches: false, addEventListener: function () {} };
             function handleMotionChange(e) {
                 if (e.matches) { cancelAnimationFrame(animationId); ctx.clearRect(0, 0, canvas.width, canvas.height); }
                 else draw();
             }
-            mediaQuery.addEventListener('change', handleMotionChange);
+            if (mediaQuery.addEventListener) mediaQuery.addEventListener('change', handleMotionChange);
             window.addEventListener('resize', resize);
             resize();
             if (!mediaQuery.matches) draw();
@@ -455,32 +475,79 @@
         })();
 
         // ========== SCROLL REVEALS ==========
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) entry.target.classList.add('visible');
-            });
-        }, { threshold: 0.15, rootMargin: '0px 0px -30px 0px' });
-        document.querySelectorAll('.reveal-up, .reveal-fade, .stagger').forEach(el => observer.observe(el));
+        (function () {
+            const targets = document.querySelectorAll('.reveal-up, .reveal-fade, .stagger');
+            if (typeof IntersectionObserver !== 'function') {
+                // No observer support: show everything immediately.
+                targets.forEach(el => el.classList.add('visible'));
+                return;
+            }
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) entry.target.classList.add('visible');
+                });
+            }, { threshold: 0.15, rootMargin: '0px 0px -30px 0px' });
+            targets.forEach(el => observer.observe(el));
+        })();
 
+    </script>
+
+    <!-- Modal wiring lives in its own script: an error elsewhere on the page can
+         never leave the X button / backdrop / Escape unresponsive. -->
+    <script>
         // ========== GAMEPLAY MODAL ==========
         const modal = document.getElementById('gameplayModal');
         const iframe = document.getElementById('gameplayIframe');
+        const GAMEPLAY_URL = "https://www.youtube.com/embed/EqqITg7kaEE?autoplay=1&mute=1&playsinline=1&rel=0";
 
         function openModal() {
-            iframe.src = "https://www.youtube.com/embed/EqqITg7kaEE?autoplay=1&mute=1";
+            if (!modal) return;
+            if (iframe) iframe.src = GAMEPLAY_URL;
+            // If the embed never reports a load, offer a plain YouTube link instead.
+            const fallback = document.getElementById('videoFallback');
+            if (fallback) fallback.classList.add('hidden');
+            clearTimeout(window.__videoFallbackTimer);
+            window.__videoFallbackTimer = setTimeout(function () {
+                if (modal.classList.contains('modal-visible') && fallback) fallback.classList.remove('hidden');
+            }, 4000);
+            modal.hidden = false;                    // drop the fallback hide first
             modal.classList.remove('modal-hidden');
             modal.classList.add('modal-visible');
+            document.body.classList.add('modal-open');
             document.body.style.overflow = 'hidden';
         }
 
         function closeModal() {
-            iframe.src = "";
+            if (!modal) return;
+            clearTimeout(window.__videoFallbackTimer);
+            if (iframe) iframe.src = "";             // stops playback
             modal.classList.remove('modal-visible');
             modal.classList.add('modal-hidden');
+            modal.hidden = true;                     // guarantees it actually disappears
+            document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
         }
 
+        // Delegated handler so the X, the backdrop and Escape all keep working even
+        // if this script runs before/after the markup is parsed.
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close-modal]')) closeModal();
+        });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        // Smooth in-page scrolling, done in JS so the smooth behaviour can never
+        // interfere with the modal or with jumping back to the top.
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[data-scroll-link]');
+            if (!link) return;
+            const target = document.querySelector(link.getAttribute('href'));
+            if (!target) return;
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        window.openModal = openModal;
+        window.closeModal = closeModal;
     </script>
 </body>
 </html>
