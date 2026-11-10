@@ -56,12 +56,34 @@
         /* Background video container */
         .video-background {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; z-index: -2; background: #0B0A10;
+            --parallax-y: 0px;
+            transform: translate3d(0, var(--parallax-y), 0) scale(1.12);
+            will-change: transform;
         }
         .video-background video {
             position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%;
             width: auto; height: auto; transform: translate(-50%, -50%); object-fit: cover; opacity: 0.45;
         }
         .overlay { position: fixed; inset: 0; background: rgba(11,10,16,0.65); z-index: -1; }
+
+        /* Scroll parallax: the oversized media stays inside its frame while the
+           CSS variable is updated once per animation frame in JavaScript. */
+        .parallax-frame {
+            position: relative; overflow: hidden; isolation: isolate;
+            --parallax-y: 0px;
+        }
+        .parallax-media {
+            --parallax-scale: 1.16;
+            transform: translate3d(0, var(--parallax-y), 0) scale(var(--parallax-scale));
+            transform-origin: center;
+            will-change: transform;
+        }
+        .gallery-card .parallax-media { transition: filter 0.4s ease; }
+        .gallery-card:hover .parallax-media { filter: brightness(1.08) saturate(1.12); }
+        @media (prefers-reduced-motion: reduce) {
+            .video-background { transform: none; will-change: auto; }
+            .parallax-media { --parallax-scale: 1.02; will-change: auto; }
+        }
 
         /* Custom animations */
         @media (prefers-reduced-motion: no-preference) {
@@ -116,8 +138,8 @@
     </div>
 
     <!-- Background Video (Autumn Temple) -->
-    <div class="video-background">
-        <video autoplay muted loop playsinline>
+    <div class="video-background" data-parallax data-parallax-fixed data-parallax-speed="0.08">
+        <video autoplay muted loop playsinline poster="assets/images/chisa-autumn-temple.webp" aria-hidden="true">
             <source src="https://motionbgs.com/media/8904/chisa-autumn-temple.960x540.mp4" type="video/mp4">
         </video>
     </div>
@@ -148,11 +170,12 @@
         <div class="max-w-6xl w-full grid md:grid-cols-2 gap-12 items-center">
             <!-- Left: Portrait with decorative frame -->
             <div class="reveal-up flex justify-center">
-                <div class="relative w-64 h-64 md:w-80 md:h-80 rounded-full border-4 border-havoc/50 shadow-havoc overflow-hidden bg-gradient-to-br from-havoc/20 to-autumn/20 backdrop-blur-sm">
-                    <img src="https://static.wikia.nocookie.net/wutheringwaves/images/b/b4/Chisa_2025-05-30.jpg/revision/latest/scale-to-width-down/250?cb=20250530122327"
-     alt="Chisa portrait"
-     class="w-full h-full object-cover object-[center_30%]"
-     loading="eager">
+                <div class="parallax-frame w-64 h-64 md:w-80 md:h-80 rounded-full border-4 border-havoc/50 shadow-havoc bg-gradient-to-br from-havoc/20 to-autumn/20 backdrop-blur-sm"
+                     data-parallax data-parallax-speed="0.09" data-parallax-limit="20">
+                    <img src="assets/images/chisa-portrait.webp"
+                         alt="Chisa holding a red ribbon and a pair of scissors"
+                         class="parallax-media w-full h-full object-cover object-[center_28%]"
+                         width="881" height="1200" loading="eager" fetchpriority="high" decoding="async">
                 </div>
             </div>
             <!-- Right: Text -->
@@ -205,8 +228,13 @@
             </div>
             <div class="reveal-up order-1 md:order-2 flex justify-center">
                 <div class="w-full max-w-xs p-4 bg-white/[0.03] backdrop-blur-md border border-havoc/20 rounded-2xl shadow-inner-glow">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV07n3zmATlbq94x7PeRGifhogW4r6r0CHV6Ga9NBpREwrbvk-TzcBV5XB&s=10"
-                         alt="Chisa full-body artwork" class="w-full h-auto rounded-lg border border-havoc/20" loading="lazy">
+                    <div class="parallax-frame aspect-[4/5] rounded-lg border border-havoc/20"
+                         data-parallax data-parallax-speed="0.07" data-parallax-limit="22">
+                        <img src="assets/images/chisa-character-poster.webp"
+                             alt="Chisa character poster with Havoc imagery"
+                             class="parallax-media w-full h-full object-cover object-[center_43%]"
+                             width="900" height="2000" loading="lazy" decoding="async">
+                    </div>
                 </div>
             </div>
         </div>
@@ -318,21 +346,33 @@
     <section id="gallery" class="relative z-10 py-24 px-4 bg-gradient-to-t from-void via-void/95 to-void/90">
         <h2 class="text-4xl font-playfair font-bold text-center text-havoc mb-16 reveal-fade">Academy Moments</h2>
         <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-            <div class="aspect-square rounded-2xl overflow-hidden border border-havoc/20 hover:border-havoc/60 transition-all duration-300">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjSPGr_ZnHjNHNaAJCJDH0UMGvfqDHF2HGIgLK9soAGw&s=10"
-                     alt="Chisa screenshot 1" class="w-full h-full object-cover" loading="lazy">
+            <div class="gallery-card parallax-frame aspect-square rounded-2xl border border-havoc/20 hover:border-havoc/60 transition-colors duration-300"
+                 data-parallax data-parallax-speed="0.065" data-parallax-limit="24">
+                <img src="assets/images/chisa-autumn-temple.webp"
+                     alt="Chisa standing on a temple bridge surrounded by red autumn leaves"
+                     class="parallax-media w-full h-full object-cover object-[35%_center]"
+                     width="1250" height="700" loading="lazy" decoding="async">
             </div>
-            <div class="aspect-square rounded-2xl overflow-hidden border border-havoc/20 hover:border-havoc/60 transition-all duration-300">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQImR9u_M3k7kXYivc7iREykdeEeNEgl1rhuqQhcOhY7w&s=10"
-                     alt="Chisa screenshot 2" class="w-full h-full object-cover" loading="lazy">
+            <div class="gallery-card parallax-frame aspect-square rounded-2xl border border-havoc/20 hover:border-havoc/60 transition-colors duration-300"
+                 data-parallax data-parallax-speed="0.08" data-parallax-limit="26">
+                <img src="assets/images/chisa-autumn-train.webp"
+                     alt="Chisa beside a train during the autumn railway collaboration"
+                     class="parallax-media w-full h-full object-cover object-[72%_center]"
+                     width="1400" height="788" loading="lazy" decoding="async">
             </div>
-            <div class="aspect-square rounded-2xl overflow-hidden border border-havoc/20 hover:border-havoc/60 transition-all duration-300">
-                <img src="https://pbs.twimg.com/media/G6HSRKOawAAyLH9.jpg"
-                     alt="Chisa screenshot 3" class="w-full h-full object-cover" loading="lazy">
+            <div class="gallery-card parallax-frame aspect-square rounded-2xl border border-havoc/20 hover:border-havoc/60 transition-colors duration-300"
+                 data-parallax data-parallax-speed="0.07" data-parallax-limit="24">
+                <img src="assets/images/chisa-thousand-blooms.webp"
+                     alt="Chisa above a luminous city of memories and flowers"
+                     class="parallax-media w-full h-full object-cover object-[center_27%]"
+                     width="900" height="1600" loading="lazy" decoding="async">
             </div>
-            <div class="aspect-square rounded-2xl overflow-hidden border border-havoc/20 hover:border-havoc/60 transition-all duration-300">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGbPndcJMGybYUiXNQXXTtJfm-hsVmOwNqHAgBRALXe9hafuxzMBzzSGY&s=10"
-                     alt="Chisa screenshot 4" class="w-full h-full object-cover" loading="lazy">
+            <div class="gallery-card parallax-frame aspect-square rounded-2xl border border-havoc/20 hover:border-havoc/60 transition-colors duration-300"
+                 data-parallax data-parallax-speed="0.085" data-parallax-limit="26">
+                <img src="assets/images/chisa-reflection.webp"
+                     alt="Chisa reaching across a reflective pool scattered with petals"
+                     class="parallax-media w-full h-full object-cover object-[38%_center]"
+                     width="800" height="450" loading="lazy" decoding="async">
             </div>
         </div>
     </section>
@@ -488,6 +528,74 @@
                 });
             }, { threshold: 0.15, rootMargin: '0px 0px -30px 0px' });
             targets.forEach(el => observer.observe(el));
+        })();
+
+        // ========== SCROLL PARALLAX ==========
+        (function () {
+            const layers = Array.from(document.querySelectorAll('[data-parallax]'));
+            if (!layers.length) return;
+
+            const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+            let animationFrame = null;
+
+            function resetLayers() {
+                layers.forEach(layer => layer.style.setProperty('--parallax-y', '0px'));
+            }
+
+            function updateLayers() {
+                animationFrame = null;
+                if (motionPreference.matches) {
+                    resetLayers();
+                    return;
+                }
+
+                const viewportHeight = window.innerHeight;
+                layers.forEach(layer => {
+                    const speed = parseFloat(layer.dataset.parallaxSpeed) || 0.07;
+                    let offset = 0;
+
+                    if (layer.hasAttribute('data-parallax-fixed')) {
+                        // Keep the fixed background moving gently without exposing an edge.
+                        offset = Math.min(window.scrollY * speed, viewportHeight * 0.045);
+                    } else {
+                        const rect = layer.getBoundingClientRect();
+                        if (rect.bottom < -100 || rect.top > viewportHeight + 100) return;
+
+                        const distanceFromCenter = (rect.top + rect.height / 2) - viewportHeight / 2;
+                        const requestedLimit = parseFloat(layer.dataset.parallaxLimit) || 24;
+                        // Smaller frames need less travel; the 1.16 scale hides the movement.
+                        const frameLimit = Math.min(rect.width, rect.height) * 0.065;
+                        const limit = Math.min(requestedLimit, frameLimit);
+                        offset = Math.max(-limit, Math.min(limit, -distanceFromCenter * speed));
+                    }
+
+                    layer.style.setProperty('--parallax-y', `${offset.toFixed(2)}px`);
+                });
+            }
+
+            function requestUpdate() {
+                if (animationFrame === null) animationFrame = requestAnimationFrame(updateLayers);
+            }
+
+            function handleMotionChange() {
+                if (motionPreference.matches) {
+                    if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                    resetLayers();
+                } else {
+                    requestUpdate();
+                }
+            }
+
+            window.addEventListener('scroll', requestUpdate, { passive: true });
+            window.addEventListener('resize', requestUpdate, { passive: true });
+            window.addEventListener('load', requestUpdate, { once: true });
+            if (motionPreference.addEventListener) {
+                motionPreference.addEventListener('change', handleMotionChange);
+            } else if (motionPreference.addListener) {
+                motionPreference.addListener(handleMotionChange);
+            }
+            requestUpdate();
         })();
 
     </script>
